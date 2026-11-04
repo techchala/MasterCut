@@ -1,0 +1,38 @@
+# Android Studio and IntelliJ
+.idea/
+*.iml
+
+# Gradle and Kotlin caches/build outputs
+.gradle/
+.kotlin/
+**/build/
+/build/
+/out/
+local.properties
+
+# Local machine/editor files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Logs and crash dumps
+*.log
+*.hprof
+
+# Native build outputs
+.cxx/
+.externalNativeBuild/
+
+# Generated Android packages (publish these through GitHub Releases)
+*.apk
+*.aab
+
+# Signing keys and local signing configuration
+*.jks
+*.keystore
+keystore.properties
+signing.properties
+
+# Android Studio local captures
+captures/
