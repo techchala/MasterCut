@@ -1249,6 +1249,23 @@ class EditorState {
         status = "Jump: ${fmt(p)}"
     }
 
+    /** Playhead কে timeline এর একদম শুরুতে (0:00) নিয়ে যায় */
+    fun goToStart() {
+        isPlaying = false
+        playheadMs = 0L
+        jumpTick++
+        status = "Home: ${fmt(0L)}"
+    }
+
+    /** Playhead কে timeline এর একদম শেষে (সর্বশেষ ক্লিপের শেষ প্রান্তে) নিয়ে যায় */
+    fun goToEnd() {
+        isPlaying = false
+        val end = clips.maxOfOrNull { it.endMs } ?: 0L
+        playheadMs = end.coerceIn(0L, totalMs)
+        jumpTick++
+        status = "End: ${fmt(playheadMs)}"
+    }
+
     private fun nearestSnap(valueMs: Long, candidates: List<Long>, snapMs: Long): Long? =
         candidates.distinct().minByOrNull { abs(it - valueMs) }?.takeIf { abs(it - valueMs) <= snapMs }
 
@@ -3906,50 +3923,50 @@ fun EditorScreen(state: EditorState, exporter: ExportManager, onBackToWelcome: (
 
     Column(modifier = Modifier.fillMaxSize().background(BgDark).safeDrawingPadding()) {
         Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
-            Row(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(PanelDark)
-                    .padding(4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                SideActionBar(state, onHomeClick = onBackToWelcome)
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(PanelDark)
+                .padding(4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            SideActionBar(state, onHomeClick = onBackToWelcome)
 
-                SideInfoPanel(state, modifier = Modifier.width(90.dp).fillMaxHeight())
+            SideInfoPanel(state, modifier = Modifier.width(90.dp).fillMaxHeight())
 
-                PreviewArea(
-                    state = state,
-                    exporter = exporter,
-                    onPickVideo = {
-                        videoPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.VideoOnly))
-                    },
-                    onPickVideoFile = { videoFilePicker.launch(arrayOf("video/*")) },
-                    onPickAudio = { audioPicker.launch(arrayOf("audio/*")) },
-                    onPickImage = {
-                        imagePicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-                    },
-                    onPickOverlayVideo = {
-                        overlayVideoPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.VideoOnly))
-                    },
-                    onAddText = { showTextDialog = true },
-                    modifier = Modifier.weight(1f).fillMaxHeight()
-                )
+            PreviewArea(
+                state = state,
+                exporter = exporter,
+                onPickVideo = {
+                    videoPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.VideoOnly))
+                },
+                onPickVideoFile = { videoFilePicker.launch(arrayOf("video/*")) },
+                onPickAudio = { audioPicker.launch(arrayOf("audio/*")) },
+                onPickImage = {
+                    imagePicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                },
+                onPickOverlayVideo = {
+                    overlayVideoPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.VideoOnly))
+                },
+                onAddText = { showTextDialog = true },
+                modifier = Modifier.weight(1f).fillMaxHeight()
+            )
 
-                val selClip = state.selectedClip
-                val track = state.tracks.firstOrNull { it.id == selClip?.trackId }
-                val isAudio = track != null && (track.category == TrackCategory.AUDIO || track.category == TrackCategory.VIDEO || (track.category == TrackCategory.OVERLAY && selClip?.isVideoOverlay == true))
+            val selClip = state.selectedClip
+            val track = state.tracks.firstOrNull { it.id == selClip?.trackId }
+            val isAudio = track != null && (track.category == TrackCategory.AUDIO || track.category == TrackCategory.VIDEO || (track.category == TrackCategory.OVERLAY && selClip?.isVideoOverlay == true))
 
-                // ওভারলে-ভিডিওতে ভলিউম ও Properties (Opacity/Scale/Rotate) দুটোই লাগে — তাই প্যানেলে টগল বাটন আছে
-                val overlayVideoSel = selClip != null && track?.category == TrackCategory.OVERLAY && selClip.isVideoOverlay
-                if (selClip != null && isAudio && !(overlayVideoSel && state.showOverlayProps)) {
-                    VolumeAudioPanel(state, modifier = Modifier.padding(start = 8.dp).width(90.dp).fillMaxHeight())
-                } else {
-                    PropertiesPanel(state, modifier = Modifier.padding(start = 8.dp).width(90.dp).fillMaxHeight())
-                }
-
-                RightPanel(state, Modifier.fillMaxHeight().width(120.dp))
+            // ওভারলে-ভিডিওতে ভলিউম ও Properties (Opacity/Scale/Rotate) দুটোই লাগে — তাই প্যানেলে টগল বাটন আছে
+            val overlayVideoSel = selClip != null && track?.category == TrackCategory.OVERLAY && selClip.isVideoOverlay
+            if (selClip != null && isAudio && !(overlayVideoSel && state.showOverlayProps)) {
+                VolumeAudioPanel(state, modifier = Modifier.padding(start = 8.dp).width(90.dp).fillMaxHeight())
+            } else {
+                PropertiesPanel(state, modifier = Modifier.padding(start = 8.dp).width(90.dp).fillMaxHeight())
             }
+
+            RightPanel(state, Modifier.fillMaxHeight().width(120.dp))
+        }
 
             if (state.panel == FX_ADJUST_PANEL) {
                 AdjustPanel(state, Modifier.align(Alignment.CenterEnd))
@@ -5752,7 +5769,7 @@ private fun PillBtn(text: String, color: Color = Accent, onClick: () -> Unit) {
 @Composable
 private fun RightPanel(state: EditorState, modifier: Modifier) {
     BoxWithConstraints(modifier = modifier) {
-        val wheelSize = (maxHeight - 56.dp).coerceIn(100.dp, 124.dp)
+        val wheelSize = (maxHeight - 86.dp).coerceIn(90.dp, 124.dp)
         Column(
             modifier = Modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -5779,6 +5796,30 @@ private fun TransportControls(state: EditorState) {
             PlayButton(state.isPlaying, buttonSize = 40.dp) { state.isPlaying = !state.isPlaying }
             EdgeButton(forward = true, buttonSize = 34.dp) { state.jumpToNextEdit() }
         }
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            HomeEndButton("Home") { state.goToStart() }
+            HomeEndButton("End") { state.goToEnd() }
+        }
+    }
+}
+
+@Composable
+private fun HomeEndButton(label: String, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .height(24.dp)
+            .widthIn(min = 44.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color(0xFF2B2B2B))
+            .border(1.dp, Color(0xFF444444), RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 10.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(label, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
     }
 }
 
@@ -6028,7 +6069,7 @@ private fun Timeline(state: EditorState) {
         }
     }
 }
-//TIMELINE TOOLBAR ======**********--============
+                     //TIMELINE TOOLBAR ======**********--============
 @Composable
 private fun TimelineToolbar(state: EditorState) {
     var showLayerMenu by remember { mutableStateOf(false) }
